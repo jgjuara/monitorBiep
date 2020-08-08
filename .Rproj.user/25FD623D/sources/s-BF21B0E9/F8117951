@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1596922085849.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "176205027",
+    "id" : "F8117951",
+    "lastKnownWriteTime" : 1596922326,
+    "last_content_update" : 1596922326787,
+    "path" : "~/Documentos/rProyects/monitorBiep/monitor_biep.Rmd",
+    "project_path" : "monitor_biep.Rmd",
+    "properties" : {
+        "cursorPosition" : "711,3",
+        "scrollLine" : "693"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}
