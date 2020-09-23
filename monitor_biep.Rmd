@@ -580,7 +580,7 @@ BIEP_EDUCA_temp <- BIEP_EDUCA_temp %>%
              Período == 201711 ~ "2017-11-01",
              Período == 201811 ~ "2018-11-01",
              Período == 201911 ~ "2019-11-01",
-             Período == 202004 ~ "2020-04-01"
+             Período == 202005 ~ "2020-05-01"
            )) %>% 
   mutate( `Período Fecha`= as.Date(`Período Fecha`,"%Y-%m-%d"))
 
@@ -605,7 +605,7 @@ ipc <- ipc %>%
              indice_tiempo == "2017-11-01" ~ 201711,
              indice_tiempo == "2018-11-01" ~ 201811,
              indice_tiempo == "2019-11-01" ~ 201911,
-             indice_tiempo == "2020-04-01" ~ 202004,
+             indice_tiempo == "2020-05-01" ~ 202005,
            ))
 
 #datos de año base 2017
