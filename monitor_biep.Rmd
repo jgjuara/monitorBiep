@@ -26,7 +26,7 @@ library(data.table)
 library(scales)
 library(plotly)
 
-BIEP_EDUCA <- fread("curl https://www.argentina.gob.ar/sites/default/files/biep_puestos_de_trabajo_-_apn_s_nivel_educ_9.zip | funzip",
+BIEP_EDUCA <- fread("curl https://www.argentina.gob.ar/sites/default/files/biep_puestos_de_trabajo_-_apn_s_nivel_educ_10.zip | funzip",
                     dec = ",")
 
 BIEP_EDUCA <-  BIEP_EDUCA %>%
@@ -57,7 +57,7 @@ BIEP_EDUCA <- rename(BIEP_EDUCA,
                      SBP = `Salario Bruto Promedio`,
                      Jurisdiccion = `Jurisdicción (s/Fecha)`,
                      Organismo = `Organismo (s/Fecha)`,
-                     Puestos = `Puestos De Trabajo (SUMA)`
+                     Puestos = `Puestos De Trabajo`
   )
 
 BIEP_EDUCA_temp <- BIEP_EDUCA %>% 
@@ -154,7 +154,7 @@ indiceEscalafones <- tibble(Escalafones = unique(BIEP_EDUCA$Escalafón)) %>%
   separate(Escalafones, sep =  "-", into = "indexEscalafon", remove = F)
 
 enframe(unlist(rqEscalafones)) %>% 
-  add_column(tau =rep(seq(5,100, by = 5), times = 92)) %>%
+  add_column(tau =rep(seq(5,100, by = 5), times = length(rqEscalafones))) %>%
   separate(name, sep =  "-", into = "indexEscalafon") %>% 
   mutate(value = round(value, 0)) %>% 
   left_join(indiceEscalafones) %>% 
@@ -481,7 +481,7 @@ g1 <- tab2 %>%
   geom_point(size=2)+
   geom_segment(aes(x = Escalafón, xend = Escalafón, y = 0, yend = `Salario Bruto Promedio (pesos corrientes)`), size=2)+
   scale_color_viridis_d()+
-  scale_y_continuous(labels = scales::comma)+
+  scale_y_continuous(labels = scales::comma, breaks = c(50000,100000,200000,400000,600000))+
   theme_minimal()+
   guides(color = F)+
   xlab("")+
