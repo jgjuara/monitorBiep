@@ -1,7 +1,7 @@
 ---
 title: "Monitor de Empleo Público Nacional Argentino - BIEP"
 author: "Juan Gabriel Juara"
-date: "10/12/2020"
+date: 
 output: 
   html_document:
     theme: readable
@@ -26,7 +26,7 @@ library(data.table)
 library(scales)
 library(plotly)
 
-BIEP_EDUCA <- fread("curl https://www.argentina.gob.ar/sites/default/files/biep_puestos_de_trabajo_-_apn_s_nivel_educ_11.zip | funzip",
+BIEP_EDUCA <- fread("curl https://www.argentina.gob.ar/sites/default/files/biep_puestos_de_trabajo_-_apn_s_nivel_educ_2009-202010.zip | funzip",
                     dec = ",")
 
 BIEP_EDUCA <-  BIEP_EDUCA %>%
@@ -572,18 +572,11 @@ Volver a [Inicio](#inicio)
 
 ```{r, include= FALSE}
 BIEP_EDUCA_temp <- BIEP_EDUCA_temp %>% 
-  mutate(`Período Fecha` =
-           case_when(
-             Período == 201511 ~ "2015-11-01",
-             Período == 201611 ~ "2016-11-01",
-             Período == 201711 ~ "2017-11-01",
-             Período == 201811 ~ "2018-11-01",
-             Período == 201911 ~ "2019-11-01",
-             Período == 202007 ~ "2020-07-01"
-           )) %>% 
-  mutate( `Período Fecha`= as.Date(`Período Fecha`,"%Y-%m-%d"))
+  mutate(`Período Fecha` = lubridate::ymd(paste0(Período, "01")))
 
-ipc <- fread("curl https://infra.datos.gob.ar/catalog/sspm/dataset/145/distribution/145.3/download/indice-precios-al-consumidor-nivel-general-base-diciembre-2016-mensual.csv")
+ipc <- fread("curl https://infra.datos.gob.ar/catalog/sspm/dataset/145/distribution/145.9/download/indice-precios-al-consumidor-apertura-por-categorias-base-diciembre-2016-mensual.csv")
+
+ipc <- ipc[,1:2]
 ```
 
 ### Gráfico 1. Evolución del Nivel del Salario Real según Escalafón 
@@ -594,51 +587,42 @@ Este gráfico representa el nivel del salario real para cada escalafón tomando 
 #datos de año base 2017
 
 ipc <- ipc %>% 
-  select(indice_tiempo,ipc_ng_nacional) %>% 
-  as_tibble() 
-
-ipc <- ipc %>% 
-  mutate(Período =
+  mutate(`Período Fecha` =
            case_when(
-             indice_tiempo == "2016-12-01" ~ 201611,
-             indice_tiempo == "2017-11-01" ~ 201711,
-             indice_tiempo == "2018-11-01" ~ 201811,
-             indice_tiempo == "2019-11-01" ~ 201911,
-             indice_tiempo == "2020-07-01" ~ 202007,
+             indice_tiempo == "2016-12-01" ~ lubridate::ymd("2016-11-01"),
+             TRUE ~ lubridate::ymd(indice_tiempo)
            ))
 
 #datos de año base 2017
 base_BIEP_EDUCA <- BIEP_EDUCA_temp %>% 
-  semi_join(escalafonesSeleccionados) %>% 
-  group_by(Período, Escalafón) %>% 
+  left_join(escalafonesSeleccionados) %>% 
+  group_by(`Período Fecha`, Escalafón) %>% 
   summarise(base2017 = weighted.mean(CFP, Puestos)) %>% 
-  filter(Período == 201711) %>% 
+  filter(`Período Fecha` == "2017-11-01") %>% 
   left_join(ipc) %>% 
   mutate(
-    salarioRealbase = base2017/ipc_ng_nacional
+    salarioRealbase = base2017/ipc_nivel_general_nacional
   ) %>% 
   select(2,6)
 
-serie_variacion_CFP <- BIEP_EDUCA_temp %>% 
+serie_variacion_CFP <- 
+  BIEP_EDUCA_temp %>% 
   semi_join(ipc) %>% 
   semi_join(escalafonesSeleccionados) %>% 
-  group_by(Período, Escalafón) %>% 
+  group_by(`Período Fecha`, Escalafón) %>% 
   summarise(CFP = weighted.mean(CFP,Puestos)) %>% 
-  left_join(ipc, by = c("Período"="Período")) %>% 
-  mutate(salarioReal = CFP/ipc_ng_nacional) %>% 
-  inner_join(base_BIEP_EDUCA, by = "Escalafón") %>% 
-  mutate(nivelSalarioReal = round(100*salarioReal/salarioRealbase,2),
-         indice_tiempo = as.Date(indice_tiempo)) %>% 
-  ungroup() %>% 
-  select(-c(1,7))
+  left_join(ipc) %>% 
+  mutate(salarioReal = CFP/ipc_nivel_general_nacional) %>% 
+  inner_join(base_BIEP_EDUCA, by = c("Escalafón")) %>% 
+  mutate(nivelSalarioReal = round(100*salarioReal/salarioRealbase,2))
 
 cfp_timeGraf <- serie_variacion_CFP %>% 
-  ggplot(aes(x = indice_tiempo, y = nivelSalarioReal, color = Escalafón, label = Escalafón))+
+  ggplot(aes(x = `Período Fecha.x`, y = nivelSalarioReal, color = Escalafón, label = Escalafón))+
   geom_line()+
   geom_point()+
   scale_color_viridis_d()+
-  scale_x_date(breaks = unique(serie_variacion_CFP$indice_tiempo))+
   theme_minimal()+
+  scale_x_date(breaks = unique(serie_variacion_CFP$`Período Fecha.x`))+
   xlab("Año")+
   ylab("Nivel del Salario Real")+
   guides(color = F)
