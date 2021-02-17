@@ -1,7 +1,7 @@
 ---
 title: "Monitor de Empleo Público Nacional Argentino - BIEP"
 author: "Juan Gabriel Juara"
-date: "23/9/2020"
+date: "10/12/2020"
 output: 
   html_document:
     theme: readable
@@ -26,7 +26,7 @@ library(data.table)
 library(scales)
 library(plotly)
 
-BIEP_EDUCA <- fread("curl https://www.argentina.gob.ar/sites/default/files/biep_puestos_de_trabajo_-_apn_s_nivel_educ_10.zip | funzip",
+BIEP_EDUCA <- fread("curl https://www.argentina.gob.ar/sites/default/files/biep_puestos_de_trabajo_-_apn_s_nivel_educ_11.zip | funzip",
                     dec = ",")
 
 BIEP_EDUCA <-  BIEP_EDUCA %>%
@@ -160,7 +160,6 @@ enframe(unlist(rqEscalafones)) %>%
   left_join(indiceEscalafones) %>% 
   select(-indexEscalafon) %>% 
   pivot_wider(names_from = tau) %>% 
-  arrange(desc(`50`)) %>% 
   DT::datatable(filter = "top", options = list(
     lengthMenu = c(10, 25, 50, 100)))
 ```
@@ -580,7 +579,7 @@ BIEP_EDUCA_temp <- BIEP_EDUCA_temp %>%
              Período == 201711 ~ "2017-11-01",
              Período == 201811 ~ "2018-11-01",
              Período == 201911 ~ "2019-11-01",
-             Período == 202005 ~ "2020-05-01"
+             Período == 202007 ~ "2020-07-01"
            )) %>% 
   mutate( `Período Fecha`= as.Date(`Período Fecha`,"%Y-%m-%d"))
 
@@ -605,7 +604,7 @@ ipc <- ipc %>%
              indice_tiempo == "2017-11-01" ~ 201711,
              indice_tiempo == "2018-11-01" ~ 201811,
              indice_tiempo == "2019-11-01" ~ 201911,
-             indice_tiempo == "2020-05-01" ~ 202005,
+             indice_tiempo == "2020-07-01" ~ 202007,
            ))
 
 #datos de año base 2017
