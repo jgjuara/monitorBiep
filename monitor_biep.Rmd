@@ -233,7 +233,7 @@ Fecha: `r unique(BIEP_EDUCA[11])`
 ```{r}
 sinep1 <- BIEP_EDUCA %>% 
     filter(Escalafón == "303 - SINEP") %>% 
-  group_by(Organismo) %>% 
+  group_by(Jurisdiccion, Organismo) %>% 
   summarise(
     PuestosOrganismos = sum(Puestos),
     Mínimo = round(min(SBP),0),
@@ -258,7 +258,7 @@ Fecha: `r unique(BIEP_EDUCA[11])`
 ```{r}
 sinep2 <- BIEP_EDUCA %>% 
     filter(Escalafón == "303 - SINEP") %>% 
-  group_by(Organismo, Género) %>% 
+  group_by(Jurisdiccion, Organismo, Género) %>% 
   summarise(
     PuestosGenero = sum(Puestos),
     Minimo = round(min(SBP),0),
@@ -266,12 +266,12 @@ sinep2 <- BIEP_EDUCA %>%
     SD = round(sqrt(questionr::wtd.var(SBP, weights = Puestos)),0),
     Maximo =  round(max(SBP),0)
   ) %>% 
-  right_join(sinep1[1:2], by = c("Organismo")) %>% 
+  right_join(sinep1[2:3], by = c("Organismo")) %>% 
   mutate(PuestosGenero_pp = round(100*PuestosGenero/PuestosOrganismos,1))
 
 sinep2 %>% 
   mutate(Género = recode(Género, `F` = "Femenino", `M`= "Masculino")) %>% 
-  select(1,2,3,9,4,5,6,7) %>% 
+  select(1,2,3,4,10,5,6,7,8) %>% 
   rename("Puestos de Trabajo" = PuestosGenero,
          "Mínimo del Salario Bruto (pesos corrientes)" = Minimo,
          "Salario Bruto Promedio (pesos corrientes)" = Media,
@@ -290,13 +290,13 @@ Fecha: `r unique(BIEP_EDUCA[11])`
 ```{r}
 sinep3 <- BIEP_EDUCA %>% 
     filter(Escalafón == "303 - SINEP") %>% 
-  group_by(Organismo, nvlEduca) %>% 
+  group_by(Jurisdiccion,Organismo, nvlEduca) %>% 
   summarise( n = sum(Puestos),
             "Salario Bruto Promedio (pesos corrientes)" = round(weighted.mean(SBP, Puestos), 0),
             "Desviación Estándar  (pesos corrientes)" = round(sqrt(questionr::wtd.var(SBP, weights = Puestos)), 0)) %>% 
-  right_join(sinep1[1:2], by = c("Organismo")) %>% 
+  right_join(sinep1[2:3], by = c("Organismo")) %>% 
   mutate("% de los puestos del escalafón" = round(100*n/PuestosOrganismos,2)) %>% 
-  select(1,2,3,7,4,5)
+  select(1,2,3,4,8,5,6)
 
 
 sinep3 %>% 
@@ -311,13 +311,13 @@ Fecha: `r unique(BIEP_EDUCA[11])`
 ```{r}
 sinep4 <- BIEP_EDUCA %>% 
     filter(Escalafón == "303 - SINEP") %>% 
-  group_by(Organismo, `Tipo Contratación`) %>% 
+  group_by(Jurisdiccion, Organismo, `Tipo Contratación`) %>% 
   summarise( n = sum(Puestos),
             "Salario Bruto Promedio (pesos corrientes)" = round(weighted.mean(SBP, Puestos), 0),
             "Desviación Estándar" = round(sqrt(questionr::wtd.var(SBP, weights = Puestos)), 0)) %>% 
-  right_join(sinep1[1:2], by = c("Organismo")) %>% 
+  right_join(sinep1[2:3], by = c("Organismo")) %>% 
   mutate("% de los puestos del escalafón" = round(100*n/PuestosOrganismos,2)) %>% 
-  select(1,2,3,7,4,5)
+  select(1,2,3,4,8,5,6)
 
 sinep4 %>% 
   rename("Puestos de Trabajo" = n) %>% 
@@ -334,14 +334,15 @@ Fecha: `r unique(BIEP_EDUCA[11])`
 
 
 ```{r include = FALSE}
-
 totalPuestosSinep <- sum(sinep1$PuestosOrganismos)
 
 porcentaje <- sinep1 %>% 
   mutate(Puestos_pp = 100*PuestosOrganismos/totalPuestosSinep) %>% 
   filter(Puestos_pp >= 1) %>% 
+  ungroup(.) %>% 
+  summarise(Puestos_pp = sum(Puestos_pp)) %>% 
   select(Puestos_pp) %>% 
-  sum()
+  as.numeric(.)
 
 filtroSinep <- sinep1 %>% 
   mutate(Puestos_pp = 100*PuestosOrganismos/totalPuestosSinep) %>% 
@@ -402,7 +403,7 @@ Fecha: `r unique(BIEP_EDUCA[11])`
 
 ```{r}
 gsinep3 <- sinep4 %>% 
-  select(1,2,5) %>% 
+  select(2,3,6) %>% 
   pivot_wider(names_from = `Tipo Contratación`, values_from = `Salario Bruto Promedio (pesos corrientes)`) %>% 
   semi_join(filtroSinep) %>% 
   mutate(Brecha = round(100*(Contratado-Permanente)/Permanente,2)) %>% 
@@ -450,7 +451,7 @@ Fecha:`r unique(BIEP_EDUCA[11])`
 
 ```{r}
 gsinep5 <- sinep2 %>% 
-  select(1,2,5) %>% 
+  select(2,3,6) %>% 
   pivot_wider(names_from = Género, values_from = Media) %>% 
   semi_join(filtroSinep) %>% 
   mutate(Brecha = round(100*(`F`-M)/M,2)) %>% 
