@@ -26,61 +26,62 @@ library(data.table)
 library(scales)
 library(plotly)
 
-BIEP_EDUCA <- fread("curl https://www.argentina.gob.ar/sites/default/files/biep_puestos_de_trabajo_-_apn_s_nivel_educ_2009-202010.zip | funzip",
+BIEP_EDUCA <- fread("curl https://www.argentina.gob.ar/sites/default/files/2018/08/biep_puestos_de_trabajo_s_edad_antiguedad_educ_2009_202104.zip | funzip", encoding = "Latin-1",
                     dec = ",")
 
 BIEP_EDUCA <-  BIEP_EDUCA %>%
   mutate(
     nvlEduca = as_factor(
       case_when(
-        `Nivel Educativo` == "Medio (secundario / polimodal)" ~ 2,
-        `Nivel Educativo` == "Sin información" ~ 99,
-        `Nivel Educativo` == "Terciario (no universitario)" ~ 3,
-        `Nivel Educativo` == "Universitario (grado)" ~ 4,
-        `Nivel Educativo` == "Maestría" ~ 5,
-        `Nivel Educativo` == "Doctorado" ~ 5,
-        `Nivel Educativo` == "Básico (primario / EGB)" ~ 1,
-        `Nivel Educativo` == "Posgrado" ~ 5,
-        `Nivel Educativo` == "Nivel Inicial" ~ 1,
-        `Nivel Educativo` == "Posdoctorado" ~ 5,
-        is.na(`Nivel Educativo`) ~ 98)
+        EDUCACION_BIEP == "Medio (secundario / polimodal)" ~ 2,
+        EDUCACION_BIEP == "Sin información" ~ 99,
+        EDUCACION_BIEP == "Terciario (no universitario)" ~ 3,
+        EDUCACION_BIEP == "Universitario (grado)" ~ 4,
+        EDUCACION_BIEP == "Maestría" ~ 5,
+        EDUCACION_BIEP == "Doctorado" ~ 5,
+        EDUCACION_BIEP == "Básico (primario / EGB)" ~ 1,
+        EDUCACION_BIEP == "Posgrado" ~ 5,
+        EDUCACION_BIEP == "Nivel Inicial" ~ 1,
+        EDUCACION_BIEP == "Posdoctorado" ~ 5,
+        is.na(EDUCACION_BIEP) ~ 98)
     )
   )
 
-BIEP_EDUCA <- BIEP_EDUCA %>% 
-  mutate(`Tipo Contratación` = recode(BIEP_EDUCA$`Tipo Contratación`, `T` = "Temporaria", `P` = "Permanente", `C` = "Contratado"))
-
 levels(BIEP_EDUCA$nvlEduca) <- c("Nivel Inicial", "Nivel Medio", "Terciario", "Grado", "Posgrado","Sin información")
 
+BIEP_EDUCA <- BIEP_EDUCA %>% 
+  mutate(TIPO_CONTRATACION = recode(BIEP_EDUCA$TIPO_CONTRATACION, `T` = "Temporaria", `P` = "Permanente", `C` = "Contratado"))
+
 BIEP_EDUCA <- rename(BIEP_EDUCA,
-                     CFP = `Conc. Fijos Promedio`,
-                     SBP = `Salario Bruto Promedio`,
-                     Jurisdiccion = `Jurisdicción (s/Fecha)`,
-                     Organismo = `Organismo (s/Fecha)`,
-                     Puestos = `Puestos De Trabajo`
+                     CFP = `Conceptos FIJOS Prom`,
+                     SBP = `Salario BRUTO Prom.`,
+                     Jurisdiccion = `JURISDICCIÓN`,
+                     Organismo = `ORGANISMO`,
+                     Puestos = `PUESTOS_DE_TRABAJO`
   )
 
 BIEP_EDUCA_temp <- BIEP_EDUCA %>% 
   filter(
-    Período >= 201511
+    PERIODO >= 201511
   )
 
 BIEP_EDUCA <- BIEP_EDUCA %>%
   filter(
     .,
-    Período == max(BIEP_EDUCA$Período) &
-      Escalafón != "805 - CIVIL DE INTELIGENCIA" &
+    PERIODO == max(BIEP_EDUCA$PERIODO) &
+      ESCALAFÓN != "805 - CIVIL DE INTELIGENCIA" &
       SBP >= 16875 &
-      Género != "O"
+      SEXO != "O"
   )
 
 totalMasaSalarial <- sum(BIEP_EDUCA$SBP*BIEP_EDUCA$Puestos) 
 totalPuestosTrabajo <- sum(BIEP_EDUCA$Puestos)
+fecha_pub <- max(BIEP_EDUCA$PERIODO_FECHA)
 ```
 
 ## Inicio
 
-Esta página resume la información correspondiente a la fecha `r unique(BIEP_EDUCA[11])` (último periodo publicado) sobre cantidad de puestos de trabajo y salarios brutos (expresados en pesos corrientes) según nivel educativo y género para todos los escalafones registrados en la [Base Integrada de Empleo Público](https://www.argentina.gob.ar/gestion-y-empleo-publico/empleo-publico/Biep) de la Subsecretaría de Empleo Público de la Nación. Además, se incluye la desagregación por organismos de las mismas variables para el escalafón SINEP. 
+Esta página resume la información correspondiente a la fecha `r fecha_pub` (último periodo publicado) sobre cantidad de puestos de trabajo y salarios brutos (expresados en pesos corrientes) según nivel educativo y género para todos los escalafones registrados en la [Base Integrada de Empleo Público](https://www.argentina.gob.ar/gestion-y-empleo-publico/empleo-publico/Biep) de la Subsecretaría de Empleo Público de la Nación. Además, se incluye la desagregación por organismos de las mismas variables para el escalafón SINEP. 
 
 ## Todos los escalafones registrados en la BIEP {.tabset .tabset-fade .tabset-pills}
 
@@ -88,13 +89,13 @@ Volver a [Inicio](#inicio)
 
 ### Tabla 1. Resumen del universo de la BIEP. 
 
-Fecha: `r unique(BIEP_EDUCA[11])`
+Fecha: `r fecha_pub`
 ```{r}
 BIEP_EDUCA %>% 
   summarise(
     "Cantidad de Puestos de Trabajo comprendidos" = sum(Puestos),
     "Masa Salarial Total (pesos corrientes)" = sum(Puestos*SBP),
-    "Cantidad de Escalafones comprendidos" = n_distinct(BIEP_EDUCA$Escalafón),
+    "Cantidad de Escalafones comprendidos" = n_distinct(BIEP_EDUCA$ESCALAFÓN),
     "Cantidad de Jurisdicciones comprendidas" = n_distinct(BIEP_EDUCA$Jurisdiccion),
     "Cantidad de Organismos comprendidos" = n_distinct(BIEP_EDUCA$Organismo)
   ) %>% 
@@ -105,17 +106,17 @@ BIEP_EDUCA %>%
 
 ### Tabla 2. Información de puestos de trabajo y salarios brutos por Escalafón.
 
-Puestos de trabajo, porcentaje del total de puestos de trabajo, masa salarial, porcentaje del total de masa salarial, salario bruto promedio y desviación estándar del salario bruto promedio por escalafón. Fecha: `r unique(BIEP_EDUCA[11])`
+Puestos de trabajo, porcentaje del total de puestos de trabajo, masa salarial, porcentaje del total de masa salarial, salario bruto promedio y desviación estándar del salario bruto promedio por escalafón. Fecha: `r fecha_pub`
 ```{r}
 tab2 <- BIEP_EDUCA %>% 
-  group_by(Escalafón) %>% 
+  group_by(ESCALAFÓN) %>% 
   summarise(
     "Puestos de Trabajo" = sum(Puestos),
     "% del total de Puestos de Trabajo" = round(100*sum(Puestos)/totalPuestosTrabajo, 4),
     "Masa Salarial (miles de pesos corrientes)" = round(sum(Puestos*SBP)/1000, 0),
     "% del total de Masa Salarial" = round(100*sum(Puestos*SBP)/totalMasaSalarial,4),
     "Salario Bruto Promedio (pesos corrientes)" = round(weighted.mean(SBP, Puestos), 0),
-    "Desviación Estándar del Salario Bruto (pesos corrientes)" = round(sqrt(questionr::wtd.var(SBP, weights = Puestos)), 0) )
+    "Desviación Estándar del Salario Bruto (pesos corrientes)" = round(sqrt(Hmisc::wtd.var(SBP, weights = Puestos)), 0) )
 
 tab2 %>%   
   DT::datatable(filter = "top", options = list(
@@ -123,22 +124,22 @@ tab2 %>%
 ```
 
 ### Tabla 3. Valor de los Percentiles de Salario Bruto por Escalafón.
-Cada columna indica el percentil expresados, los valores correspondientes están en pesos corrientes. Fecha: `r unique(BIEP_EDUCA[11])`
+Cada columna indica el percentil expresados, los valores correspondientes están en pesos corrientes. Fecha: `r fecha_pub`
 
 ```{r}
 #creo un vector con los nombres de los escalafones
-escalafones <- unique(BIEP_EDUCA$Escalafón)
+escalafones <- unique(BIEP_EDUCA$ESCALAFÓN)
 
 #creo una tabla con los puestos de trabajo por escalafon
 Puestos_escalafon <- BIEP_EDUCA %>%
-  group_by(., Escalafón) %>%
+  group_by(., ESCALAFÓN) %>%
   summarise(., Puestos = sum(Puestos))
 
 #creo una tabla y listas vacías para usar en el loop for siguiente
 rqEscalafones <- list()
 for (i in escalafones) {
   dummy <- BIEP_EDUCA %>%
-    filter(., Escalafón==i) %>%
+    filter(., ESCALAFÓN==i) %>%
     group_by(., SBP) %>%
     summarise(., Puestos = sum(Puestos))
   #la función rq no permite trabajar con matrices con una sola observación o sin observaciones
@@ -150,7 +151,7 @@ for (i in escalafones) {
   }
 }
 
-indiceEscalafones <- tibble(Escalafones = unique(BIEP_EDUCA$Escalafón)) %>% 
+indiceEscalafones <- tibble(Escalafones = unique(BIEP_EDUCA$ESCALAFÓN)) %>% 
   separate(Escalafones, sep =  "-", into = "indexEscalafon", remove = F)
 
 enframe(unlist(rqEscalafones)) %>% 
@@ -165,15 +166,15 @@ enframe(unlist(rqEscalafones)) %>%
 ```
 
 ### Tabla 4. Puestos de Trabajo y salarios brutos por nivel educativo según Escalafón.
-Puestos de trabajo, porcentaje de puestos de trabajo del escalafón, salario bruto promedio y desviación estándar del salario bruto por nivel educativo según escalafón. Fecha: `r unique(BIEP_EDUCA[11])`
+Puestos de trabajo, porcentaje de puestos de trabajo del escalafón, salario bruto promedio y desviación estándar del salario bruto por nivel educativo según escalafón. Fecha: `r fecha_pub`
 
 ```{r}
 BIEP_EDUCA %>% 
-  group_by(Escalafón, nvlEduca) %>% 
+  group_by(ESCALAFÓN, nvlEduca) %>% 
   summarise( n = sum(Puestos),
             "Salario Bruto Promedio (pesos corrientes)" = round(weighted.mean(SBP, Puestos), 0),
-            "Desviación Estándar del Salario Bruto (pesos corrientes)" = round(sqrt(questionr::wtd.var(SBP, weights = Puestos)), 0)) %>% 
-  left_join(tab2,by = "Escalafón") %>% 
+            "Desviación Estándar del Salario Bruto (pesos corrientes)" = round(sqrt(Hmisc::wtd.var(SBP, weights = Puestos)), 0)) %>% 
+  left_join(tab2,by = "ESCALAFÓN") %>% 
   mutate("% de los puestos del escalafón" = round(100*n/`Puestos de Trabajo`,2)) %>% 
   select(1,2,3,12,4,5) %>%
   rename("Puestos de Trabajo" = n,
@@ -185,15 +186,15 @@ BIEP_EDUCA %>%
 ```
 
 ### Tabla 5. Puestos de Trabajo y Salarios Brutos por Género según Escalafón.
-Puestos de trabajo, porcentaje de puestos de trabajo del escalafón, salario bruto promedio y desviación estándar del salario bruto por género según escalafón. Fecha: `r unique(BIEP_EDUCA[11])`
+Puestos de trabajo, porcentaje de puestos de trabajo del escalafón, salario bruto promedio y desviación estándar del salario bruto por género según escalafón. Fecha: `r fecha_pub`
 
 ```{r}
 BIEP_EDUCA %>% 
-  group_by(Escalafón, Género) %>% 
+  group_by(ESCALAFÓN, SEXO) %>% 
   summarise("Puestos De Trabajo" = sum(Puestos),
             "Salario Bruto Promedio (pesos corrientes)" = round(weighted.mean(SBP, Puestos),0),
-            "Desviación Estándar del Salario Bruto (pesos corrientes)" = round(sqrt(questionr::wtd.var(SBP, weights = Puestos)),0)) %>% 
-  left_join(tab2,by = "Escalafón") %>% 
+            "Desviación Estándar del Salario Bruto (pesos corrientes)" = round(sqrt(Hmisc::wtd.var(SBP, weights = Puestos)),0)) %>% 
+  left_join(tab2,by = "ESCALAFÓN") %>% 
   mutate("% de los puestos del escalafón" = round(100*`Puestos De Trabajo`/`Puestos de Trabajo`,2)) %>% 
   select(1,2,3,12,4,5) %>% 
   rename("Salario Bruto Promedio (pesos corrientes)" = `Salario Bruto Promedio (pesos corrientes).x`,
@@ -206,13 +207,13 @@ BIEP_EDUCA %>%
 ### Tabla 6. Salario Bruto Promedio por Nivel Educativo y Género y Brecha Salarial de Género por Nivel Educativo en cada Escalafón.
 La  Brecha Salarial se calcula como la diferencia entre el salario bruto promedio femenino y salario bruto promedio masculino, expresada como puntos porcentuales de salario bruto promedio masculino. 
 $100*(SBP_{f}-SBP_{m})/SBP_{m}$
-Aquí fue calculada para cada nivel educativo dentro de cada escalafón, puede haber valores faltantes debido a inexistencia de puestos de trabajo en alguna categoría o ausencia de su registro. Fecha: `r unique(BIEP_EDUCA[11])`
+Aquí fue calculada para cada nivel educativo dentro de cada escalafón, puede haber valores faltantes debido a inexistencia de puestos de trabajo en alguna categoría o ausencia de su registro. Fecha: `r fecha_pub`
 
 ```{r}
 BIEP_EDUCA %>% 
-  group_by(Escalafón, Género, nvlEduca) %>% 
+  group_by(ESCALAFÓN, SEXO, nvlEduca) %>% 
   summarise(SBPi = round(weighted.mean(SBP,Puestos),0)) %>% 
-  pivot_wider(names_from = Género, values_from = SBPi, names_prefix = "g" ) %>% 
+  pivot_wider(names_from = SEXO, values_from = SBPi, names_prefix = "g" ) %>% 
   mutate(Brecha = round(100*(gF-gM)/gM,2)) %>% 
   rename("Nivel Educativo" = nvlEduca,
           "Salario Bruto Promedio femenino (pesos)" = gF,
@@ -228,17 +229,17 @@ BIEP_EDUCA %>%
 Volver a [Inicio](#inicio)
 
 ### Tabla 1. Puestos de Trabajo y Salarios Brutos por Organimo en el SINEP.
-Fecha: `r unique(BIEP_EDUCA[11])`
+Fecha: `r fecha_pub`
 
 ```{r}
 sinep1 <- BIEP_EDUCA %>% 
-    filter(Escalafón == "303 - SINEP") %>% 
+    filter(ESCALAFÓN == "303 - SINEP") %>% 
   group_by(Jurisdiccion, Organismo) %>% 
   summarise(
     PuestosOrganismos = sum(Puestos),
     Mínimo = round(min(SBP),0),
     Media = round(weighted.mean(SBP, Puestos),0),
-    SD = round(sqrt(questionr::wtd.var(SBP, weights = Puestos)),0),
+    SD = round(sqrt(Hmisc::wtd.var(SBP, weights = Puestos)),0),
     Máximo =  round(max(SBP),0)
   )
 
@@ -253,24 +254,24 @@ sinep1 %>%
 ```
 
 ### Tabla 2. Puestos de Trabajo y Salario Bruto por Género según Organimo en el SINEP. 
-Fecha: `r unique(BIEP_EDUCA[11])`
+Fecha: `r fecha_pub`
 
 ```{r}
 sinep2 <- BIEP_EDUCA %>% 
-    filter(Escalafón == "303 - SINEP") %>% 
-  group_by(Jurisdiccion, Organismo, Género) %>% 
+    filter(ESCALAFÓN == "303 - SINEP") %>% 
+  group_by(Jurisdiccion, Organismo, SEXO) %>% 
   summarise(
     PuestosGenero = sum(Puestos),
     Minimo = round(min(SBP),0),
     Media = round(weighted.mean(SBP, Puestos),0),
-    SD = round(sqrt(questionr::wtd.var(SBP, weights = Puestos)),0),
+    SD = round(sqrt(Hmisc::wtd.var(SBP, weights = Puestos)),0),
     Maximo =  round(max(SBP),0)
   ) %>% 
   right_join(sinep1[2:3], by = c("Organismo")) %>% 
   mutate(PuestosGenero_pp = round(100*PuestosGenero/PuestosOrganismos,1))
 
 sinep2 %>% 
-  mutate(Género = recode(Género, `F` = "Femenino", `M`= "Masculino")) %>% 
+  mutate(SEXO = recode(SEXO, `F` = "Femenino", `M`= "Masculino")) %>% 
   select(1,2,3,4,10,5,6,7,8) %>% 
   rename("Puestos de Trabajo" = PuestosGenero,
          "Mínimo del Salario Bruto (pesos corrientes)" = Minimo,
@@ -285,15 +286,15 @@ sinep2 %>%
 ```
 
 ### Tabla 3. Puestos de Trabajo y Salario Bruto por Nivel Educativo según Organimo en el SINEP.
-Fecha: `r unique(BIEP_EDUCA[11])`
+Fecha: `r fecha_pub`
 
 ```{r}
 sinep3 <- BIEP_EDUCA %>% 
-    filter(Escalafón == "303 - SINEP") %>% 
+    filter(ESCALAFÓN == "303 - SINEP") %>% 
   group_by(Jurisdiccion,Organismo, nvlEduca) %>% 
   summarise( n = sum(Puestos),
             "Salario Bruto Promedio (pesos corrientes)" = round(weighted.mean(SBP, Puestos), 0),
-            "Desviación Estándar  (pesos corrientes)" = round(sqrt(questionr::wtd.var(SBP, weights = Puestos)), 0)) %>% 
+            "Desviación Estándar  (pesos corrientes)" = round(sqrt(Hmisc::wtd.var(SBP, weights = Puestos)), 0)) %>% 
   right_join(sinep1[2:3], by = c("Organismo")) %>% 
   mutate("% de los puestos del escalafón" = round(100*n/PuestosOrganismos,2)) %>% 
   select(1,2,3,4,8,5,6)
@@ -307,14 +308,14 @@ sinep3 %>%
 ```
 
 ### Tabla 4. Puestos de Trabajo y Salario Bruto por Tipo de Contratación según Organismo en el SINEP.
-Fecha: `r unique(BIEP_EDUCA[11])`
+Fecha: `r fecha_pub`
 ```{r}
 sinep4 <- BIEP_EDUCA %>% 
-    filter(Escalafón == "303 - SINEP") %>% 
-  group_by(Jurisdiccion, Organismo, `Tipo Contratación`) %>% 
+    filter(ESCALAFÓN == "303 - SINEP") %>% 
+  group_by(Jurisdiccion, Organismo, TIPO_CONTRATACION) %>% 
   summarise( n = sum(Puestos),
             "Salario Bruto Promedio (pesos corrientes)" = round(weighted.mean(SBP, Puestos), 0),
-            "Desviación Estándar" = round(sqrt(questionr::wtd.var(SBP, weights = Puestos)), 0)) %>% 
+            "Desviación Estándar" = round(sqrt(Hmisc::wtd.var(SBP, weights = Puestos)), 0)) %>% 
   right_join(sinep1[2:3], by = c("Organismo")) %>% 
   mutate("% de los puestos del escalafón" = round(100*n/PuestosOrganismos,2)) %>% 
   select(1,2,3,4,8,5,6)
@@ -330,7 +331,7 @@ sinep4 %>%
 Volver a [Inicio](#inicio)
 
 ### Gráfico 1. Salario Bruto Promedio en Organimos con más del 1% de los puestos de trabajo del SINEP. 
-Fecha: `r unique(BIEP_EDUCA[11])`
+Fecha: `r fecha_pub`
 
 
 ```{r include = FALSE}
@@ -372,13 +373,13 @@ ggplotly(gsinep1,
 
 
 ### Gráfico 2. Porcentaje de Contratados en los Puestos de Trabajo  de cada Organismo
-Fecha: `r unique(BIEP_EDUCA[11])`
+Fecha: `r fecha_pub`
 
 
 ```{r}
 
 gsinep2 <- sinep4 %>% 
-  filter(`Tipo Contratación` == "Contratado") %>% 
+  filter(TIPO_CONTRATACION == "Contratado") %>% 
   semi_join(filtroSinep) %>% 
   ggplot(aes(x= reorder(Organismo, `% de los puestos del escalafón`), y = `% de los puestos del escalafón`, fill = Organismo))+
     geom_col()+
@@ -399,12 +400,12 @@ ggplotly(gsinep2,
 ### Gráfico 3. Brecha Salarial entre Puestos de Trabajo Contratados y Permanentes por Organimo en el SINEP
 Aqui la Brecha Salarial se calcula como la diferencia entre el salario bruto promedio de puestos de trabajo contratados y el salario bruto promedio de los puestos de trabajo permanentes, expresada como puntos porcentuales de salario bruto promedio masculino. 
 $100*(SBP_{c}-SBP_{p})/SBP_{p}$
-Fecha: `r unique(BIEP_EDUCA[11])`
+Fecha: `r fecha_pub`
 
 ```{r}
 gsinep3 <- sinep4 %>% 
   select(2,3,6) %>% 
-  pivot_wider(names_from = `Tipo Contratación`, values_from = `Salario Bruto Promedio (pesos corrientes)`) %>% 
+  pivot_wider(names_from = TIPO_CONTRATACION, values_from = `Salario Bruto Promedio (pesos corrientes)`) %>% 
   semi_join(filtroSinep) %>% 
   mutate(Brecha = round(100*(Contratado-Permanente)/Permanente,2)) %>% 
   ggplot(aes(x = reorder(Organismo, Brecha), y = Brecha, fill = Brecha, label = Organismo))+
@@ -421,11 +422,11 @@ ggplotly(gsinep3,
 ```
 
 ### Grafico 4. Porcentaje de Puestos de Trabajo femeninos por Organismo en el SINEP
-Fecha: `r unique(BIEP_EDUCA[11])`
+Fecha: `r fecha_pub`
 
 ```{r}
 gsinep4 <- sinep2 %>% 
-  filter(Género == "F") %>% 
+  filter(SEXO == "F") %>% 
   semi_join(filtroSinep, by = "Organismo") %>% 
   rename("% de Puestos de Trabajo femeninos" = PuestosGenero_pp) %>% 
   ggplot(aes(x= reorder(Organismo,`% de Puestos de Trabajo femeninos`), y = `% de Puestos de Trabajo femeninos`, fill = Organismo))+
@@ -447,12 +448,12 @@ ggplotly(gsinep4,
 ### Gráfico 5. Brecha Salarial de Género por Organismo en el SINEP
 La  Brecha Salarial se calcula como la diferencia entre el salario bruto promedio femenino y salario bruto promedio masculino, expresada como puntos porcentuales de salario bruto promedio masculino. 
 $100*(SBP_{f}-SBP_{m})/SBP_{m}$
-Fecha:`r unique(BIEP_EDUCA[11])`
+Fecha:`r fecha_pub`
 
 ```{r}
 gsinep5 <- sinep2 %>% 
   select(2,3,6) %>% 
-  pivot_wider(names_from = Género, values_from = Media) %>% 
+  pivot_wider(names_from = SEXO, values_from = Media) %>% 
   semi_join(filtroSinep) %>% 
   mutate(Brecha = round(100*(`F`-M)/M,2)) %>% 
   ggplot(aes(x = reorder(Organismo, Brecha), y = Brecha, fill = Brecha, label = Organismo))+
@@ -472,14 +473,14 @@ ggplotly(gsinep5,
 ## Gráficos - Principales Escalafones en la BIEP {.tabset .tabset-fade .tabset-pills}
 Volver a [Inicio](#inicio)
 
-### Gráfico 1. Salario Bruto Promedio por escalafón `r unique(BIEP_EDUCA[11])`
+### Gráfico 1. Salario Bruto Promedio por escalafón `r fecha_pub`
     
 ```{r}
 g1 <- tab2 %>% 
   filter(tab2[5] >= 1) %>% 
-  ggplot(aes(x = reorder(Escalafón, `Salario Bruto Promedio (pesos corrientes)`), y = `Salario Bruto Promedio (pesos corrientes)`, color = Escalafón))+
+  ggplot(aes(x = reorder(ESCALAFÓN, `Salario Bruto Promedio (pesos corrientes)`), y = `Salario Bruto Promedio (pesos corrientes)`, color = ESCALAFÓN))+
   geom_point(size=2)+
-  geom_segment(aes(x = Escalafón, xend = Escalafón, y = 0, yend = `Salario Bruto Promedio (pesos corrientes)`), size=2)+
+  geom_segment(aes(x = ESCALAFÓN, xend = ESCALAFÓN, y = 0, yend = `Salario Bruto Promedio (pesos corrientes)`), size=2)+
   scale_color_viridis_d()+
   scale_y_continuous(labels = scales::comma, breaks = c(50000,100000,200000,400000,600000))+
   theme_minimal()+
@@ -493,22 +494,22 @@ ggplotly(g1,
   layout(showlegend = FALSE)
 ```
     
-### Gráfico 2. Porcentaje de Puestos de Trabajo por Nivel Educativo en cada Escalafón. `r unique(BIEP_EDUCA[11])`
+### Gráfico 2. Porcentaje de Puestos de Trabajo por Nivel Educativo en cada Escalafón. `r fecha_pub`
 
 ```{r}
 escalafonesSeleccionados <-  tab2 %>% 
   filter(tab2[5] >= 1)
 
 g2 <- BIEP_EDUCA %>% 
-  group_by(Escalafón, nvlEduca) %>% 
+  group_by(ESCALAFÓN, nvlEduca) %>% 
   summarise(PT = sum(Puestos),
             MS = sum(Puestos*SBP)) %>% 
-  inner_join(escalafonesSeleccionados, by = "Escalafón") %>% 
+  inner_join(escalafonesSeleccionados, by = "ESCALAFÓN") %>% 
   mutate("% de Puestos de Trabajo" = round(100*PT/`Puestos de Trabajo`,2)) %>% 
   ggplot(aes(x = nvlEduca, y = `% de Puestos de Trabajo`, fill = nvlEduca)) +
   geom_col() +
   scale_fill_viridis_d() +
-  facet_wrap(vars(Escalafón), ncol = 4)+
+  facet_wrap(vars(ESCALAFÓN), ncol = 4)+
   scale_y_continuous(breaks = c(0,25,50,75,100))+
   coord_flip()+
   theme_minimal()
@@ -529,29 +530,29 @@ ggplotly(g2,
 ### Gráfico 3. Brecha Salarial de Género por Escalafón
 La  Brecha Salarial se calcula como la diferencia entre el salario bruto promedio femenino y salario bruto promedio masculino, expresada como puntos porcentuales de salario bruto promedio masculino. 
 $100*(SBP_{f}-SBP_{m})/SBP_{m}$
-Fecha: `r unique(BIEP_EDUCA[11])`
+Fecha: `r fecha_pub`
 ```{r}
 
 a <- BIEP_EDUCA %>% 
-  filter(Género == "F") %>%
-  group_by(Escalafón) %>% 
+  filter(SEXO == "F") %>%
+  group_by(ESCALAFÓN) %>% 
   summarise( SBP = weighted.mean(SBP, Puestos))
 
 b <- BIEP_EDUCA %>% 
-  filter(Género == "M") %>%
-  group_by( Escalafón) %>% 
+  filter(SEXO == "M") %>%
+  group_by( ESCALAFÓN) %>% 
   summarise( SBP = weighted.mean(SBP, Puestos))
 
-c <- left_join(a, b, by = "Escalafón") %>% 
+c <- left_join(a, b, by = "ESCALAFÓN") %>% 
   mutate( Brecha = round(100*(SBP.x - SBP.y)/SBP.y,2)) %>% 
   semi_join(escalafonesSeleccionados)
 
 g3 <- c %>% 
   ggplot(aes(
-    x = reorder(Escalafón, Brecha),
+    x = reorder(ESCALAFÓN, Brecha),
     y = Brecha,
     fill = Brecha,
-    label = Escalafón
+    label = ESCALAFÓN
   )) +
   geom_col() + 
   scale_y_continuous(labels = scales::comma, breaks = c(-20,-15,-10,-5,0,5)) +
@@ -573,7 +574,7 @@ Volver a [Inicio](#inicio)
 
 ```{r, include= FALSE}
 BIEP_EDUCA_temp <- BIEP_EDUCA_temp %>% 
-  mutate(`Período Fecha` = lubridate::ymd(paste0(Período, "01")))
+  mutate(`PERIODO_FECHA` = lubridate::ymd(paste0(PERIODO, "01")))
 
 ipc <- fread("curl https://infra.datos.gob.ar/catalog/sspm/dataset/145/distribution/145.9/download/indice-precios-al-consumidor-apertura-por-categorias-base-diciembre-2016-mensual.csv")
 
@@ -588,7 +589,7 @@ Este gráfico representa el nivel del salario real para cada escalafón tomando 
 #datos de año base 2017
 
 ipc <- ipc %>% 
-  mutate(`Período Fecha` =
+  mutate(`PERIODO_FECHA` =
            case_when(
              indice_tiempo == "2016-12-01" ~ lubridate::ymd("2016-11-01"),
              TRUE ~ lubridate::ymd(indice_tiempo)
@@ -597,9 +598,9 @@ ipc <- ipc %>%
 #datos de año base 2017
 base_BIEP_EDUCA <- BIEP_EDUCA_temp %>% 
   left_join(escalafonesSeleccionados) %>% 
-  group_by(`Período Fecha`, Escalafón) %>% 
+  group_by(`PERIODO_FECHA`, ESCALAFÓN) %>% 
   summarise(base2017 = weighted.mean(CFP, Puestos)) %>% 
-  filter(`Período Fecha` == "2017-11-01") %>% 
+  filter(`PERIODO_FECHA` == "2017-11-01") %>% 
   left_join(ipc) %>% 
   mutate(
     salarioRealbase = base2017/ipc_nivel_general_nacional
@@ -610,20 +611,20 @@ serie_variacion_CFP <-
   BIEP_EDUCA_temp %>% 
   semi_join(ipc) %>% 
   semi_join(escalafonesSeleccionados) %>% 
-  group_by(`Período Fecha`, Escalafón) %>% 
+  group_by(`PERIODO_FECHA`, ESCALAFÓN) %>% 
   summarise(CFP = weighted.mean(CFP,Puestos)) %>% 
   left_join(ipc) %>% 
   mutate(salarioReal = CFP/ipc_nivel_general_nacional) %>% 
-  inner_join(base_BIEP_EDUCA, by = c("Escalafón")) %>% 
+  inner_join(base_BIEP_EDUCA, by = c("ESCALAFÓN")) %>% 
   mutate(nivelSalarioReal = round(100*salarioReal/salarioRealbase,2))
 
 cfp_timeGraf <- serie_variacion_CFP %>% 
-  ggplot(aes(x = `Período Fecha.x`, y = nivelSalarioReal, color = Escalafón, label = Escalafón))+
+  ggplot(aes(x = `PERIODO_FECHA.x`, y = nivelSalarioReal, color = ESCALAFÓN, label = ESCALAFÓN))+
   geom_line()+
   geom_point()+
   scale_color_viridis_d()+
   theme_minimal()+
-  scale_x_date(breaks = unique(serie_variacion_CFP$`Período Fecha.x`))+
+  scale_x_date(breaks = unique(serie_variacion_CFP$`PERIODO_FECHA.x`))+
   xlab("Año")+
   ylab("Nivel del Salario Real")+
   guides(color = F)
@@ -640,13 +641,13 @@ ggplotly(cfp_timeGraf,
 
 ```{r}
 genero_civil <- BIEP_EDUCA_temp %>% 
-  filter(Género != "O") %>% 
-  group_by(`Período Fecha`, Escalafón, Género) %>% 
+  filter(SEXO != "O") %>% 
+  group_by(`PERIODO_FECHA`, ESCALAFÓN, SEXO) %>% 
   summarise(
     SBPwm = weighted.mean(SBP, Puestos),
     PuestosSum = sum(Puestos)
   ) %>% 
-  pivot_wider(names_from = Género, values_from = c("SBPwm","PuestosSum") ) %>% 
+  pivot_wider(names_from = SEXO, values_from = c("SBPwm","PuestosSum") ) %>% 
   mutate(
     Brecha = round(100*(SBPwm_F-SBPwm_M)/SBPwm_M,2),
     PuestosFem_pp = round(100*PuestosSum_F/(PuestosSum_F+PuestosSum_M))
@@ -655,11 +656,11 @@ genero_civil <- BIEP_EDUCA_temp %>%
 #ver tema eje x con fechas, quedan mal las proporciones sino
 
 pp_fem <- genero_civil %>% 
-  ggplot(aes(x = `Período Fecha`,
-             y = PuestosFem_pp, color = Escalafón, label = Escalafón))+
+  ggplot(aes(x = `PERIODO_FECHA`,
+             y = PuestosFem_pp, color = ESCALAFÓN, label = ESCALAFÓN))+
   geom_line()+
   geom_point()+
-  scale_x_date(breaks = unique(genero_civil$`Período Fecha`))+
+  scale_x_date(breaks = unique(genero_civil$`PERIODO_FECHA`))+
   theme_minimal()+
   theme(legend.position = "bottom")+
   xlab("Año")+
@@ -677,11 +678,11 @@ ggplotly(pp_fem,
 La  Brecha Salarial se calcula como la diferencia entre el salario bruto promedio femenino y salario bruto promedio masculino, expresada como puntos porcentuales de salario bruto promedio masculino. 
 ```{r}
 brecha_timegraf <- genero_civil %>% 
-  ggplot(aes(x = `Período Fecha`,
-             y = Brecha, color = Escalafón, label = Escalafón))+
+  ggplot(aes(x = `PERIODO_FECHA`,
+             y = Brecha, color = ESCALAFÓN, label = ESCALAFÓN))+
     geom_point()+
   geom_line()+
-  scale_x_date(breaks = unique(genero_civil$`Período Fecha`))+
+  scale_x_date(breaks = unique(genero_civil$`PERIODO_FECHA`))+
   theme_minimal()+
   theme(legend.position = "bottom")+
   xlab("Año")+
